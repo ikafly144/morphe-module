@@ -13,7 +13,8 @@ Based on the [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magi
 | **AdGuard** | `com.adguard.android` | `arm64-v8a` | `Enable Premium` | `hoo-dles/morphe-patches` |
 | **Amazon Prime Video** | `com.amazon.avod.thirdpartyclient` | `arm64-v8a` | `Enable speed control`, `Skip ads` | `hoo-dles/morphe-patches` |
 | **Twitch** | `tv.twitch.android.app` | `arm64-v8a` | `Block audio ads`, `Block embedded ads`, `Block video ads`, `Show deleted messages`, `Auto claim channel points` | `RookieEnough/De-Vanced` |
-| **Amazon Music** | `com.amazon.mp3` | `arm64-v8a` | `Skip ads`, `Unlimited track skipping`, `Unlock Unlimited`, `Prevent log upload` | `RookieEnough/De-Vanced` |
+| **Amazon Music** | `com.amazon.mp3` | `arm64-v8a` | `Unlimited track skipping`, `Unlock Unlimited`, `Prevent log upload` | `RookieEnough/De-Vanced` |
+| **Duolingo** | `com.duolingo` | `arm64-v8a` | `Enable Premium`, `Disable Login Integrity`, `Disable dynamic app icon` | `hoo-dles/morphe-patches` |
 
 ---
 
