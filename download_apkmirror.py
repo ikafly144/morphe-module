@@ -107,6 +107,11 @@ def find_version_page(scraper, base_url: str, version: str):
     app_slug = base_url.rstrip('/').split('/')[-1]
     v_slug = sanitize_version(version)
     v_compact = compact_version(version)
+
+    v_parts = version.split('.')
+    v_trim = '.'.join(v_parts[:3]) if len(v_parts) > 3 else None
+    v_trim_slug = sanitize_version(v_trim) if v_trim else None
+    v_trim_compact = compact_version(v_trim) if v_trim else None
     
     # 1. Base listing page (most reliable & avoids guessing)
     r = safe_get(scraper, base_url)
@@ -115,13 +120,13 @@ def find_version_page(scraper, base_url: str, version: str):
         matching_links = []
         for a in soup.find_all("a", href=True):
             href = a["href"]
-            if is_version_match(href, v_slug, v_compact):
+            if is_version_match(href, v_slug, v_compact) or (v_trim_slug and is_version_match(href, v_trim_slug, v_trim_compact)):
                 matching_links.append(href)
         
         # Sort candidates: prefer those containing '-release' and matching exact slug
         matching_links.sort(key=lambda h: (1 if "-release" in h.lower() else 0, 1 if v_slug in h.lower() else 0), reverse=True)
         
-        for href in matching_links[:3]:
+        for href in matching_links[:5]:
             full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
             r2 = safe_get(scraper, full_url, referer=base_url)
             if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
@@ -134,6 +139,13 @@ def find_version_page(scraper, base_url: str, version: str):
         f"{base_url.rstrip('/')}/{v_slug}-release/",
         f"{base_url.rstrip('/')}/{v_slug}/",
     ]
+    if v_trim_slug:
+        candidates.extend([
+            f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}-release/",
+            f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}/",
+            f"{base_url.rstrip('/')}/{v_trim_slug}-release/",
+            f"{base_url.rstrip('/')}/{v_trim_slug}/",
+        ])
     for url in candidates:
         r2 = safe_get(scraper, url, referer=base_url)
         if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
@@ -149,7 +161,7 @@ def find_version_page(scraper, base_url: str, version: str):
         matching_search = []
         for a in soup.find_all("a", href=True):
             href = a["href"]
-            if is_version_match(href, v_slug, v_compact):
+            if is_version_match(href, v_slug, v_compact) or (v_trim_slug and is_version_match(href, v_trim_slug, v_trim_compact)):
                 matching_search.append(href)
         matching_search.sort(key=lambda h: (1 if "-release" in h.lower() else 0, 1 if v_slug in h.lower() else 0), reverse=True)
         for href in matching_search[:3]:
