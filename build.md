@@ -1,4 +1,5 @@
 AdGuard: 4.13.2  
+Prime-Video: 3.0.452.1047  
 
 Built with [morphe-patches](https://github.com/hoo-dles/morphe-patches) & [morphe-cli](https://github.com/MorpheApp/morphe-cli)
   
