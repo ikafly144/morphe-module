@@ -1,6 +1,6 @@
-# Morphe Magisk Modules (AdGuard & Prime Video)
+# Morphe Magisk Modules (AdGuard, Prime Video, Twitch & Amazon Music)
 
-Automatically builds Magisk / KernelSU / APatch root mount modules and standalone patched APKs for **AdGuard** and **Amazon Prime Video** using [hoo-dles/morphe-patches](https://github.com/hoo-dles/morphe-patches) and [MorpheApp/morphe-cli](https://github.com/MorpheApp/morphe-cli).
+Automatically builds Magisk / KernelSU / APatch root mount modules and standalone patched APKs for **AdGuard**, **Amazon Prime Video**, **Twitch**, and **Amazon Music** using [hoo-dles/morphe-patches](https://github.com/hoo-dles/morphe-patches), [RookieEnough/De-Vanced](https://github.com/RookieEnough/De-Vanced), and [MorpheApp/morphe-cli](https://github.com/MorpheApp/morphe-cli).
 
 Based on the [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module) builder engine.
 
@@ -8,10 +8,12 @@ Based on the [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magi
 
 ## 📱 Supported Apps & Patches
 
-| App | Package Name | Architecture | Patches Included |
-| :--- | :--- | :--- | :--- |
-| **AdGuard** | `com.adguard.android` | `arm64-v8a` | `Enable Premium` |
-| **Amazon Prime Video** | `com.amazon.avod.thirdpartyclient` | `arm64-v8a` | `Enable speed control`, `Skip ads` |
+| App | Package Name | Architecture | Patches Included | Patch Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **AdGuard** | `com.adguard.android` | `arm64-v8a` | `Enable Premium` | `hoo-dles/morphe-patches` |
+| **Amazon Prime Video** | `com.amazon.avod.thirdpartyclient` | `arm64-v8a` | `Enable speed control`, `Skip ads` | `hoo-dles/morphe-patches` |
+| **Twitch** | `tv.twitch.android.app` | `arm64-v8a` | `Block audio ads`, `Block embedded ads`, `Block video ads`, `Show deleted messages`, `Auto claim channel points` | `RookieEnough/De-Vanced` |
+| **Amazon Music** | `com.amazon.mp3` | `arm64-v8a` | `Skip ads`, `Unlimited track skipping`, `Unlock Unlimited`, `Prevent log upload` | `RookieEnough/De-Vanced` |
 
 ---
 
@@ -75,5 +77,6 @@ module-prop-name = "prime-video-morphe"
 ## 📜 Credits
 
 - [hoo-dles/morphe-patches](https://github.com/hoo-dles/morphe-patches)
+- [RookieEnough/De-Vanced](https://github.com/RookieEnough/De-Vanced)
 - [MorpheApp/morphe-cli](https://github.com/MorpheApp/morphe-cli)
 - [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module)

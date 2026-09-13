@@ -73,19 +73,23 @@ def get_versions_list(scraper, base_url: str) -> list[str]:
     if not r or r.status_code != 200:
         raise Exception(f"Failed to fetch {base_url}")
     soup = BeautifulSoup(r.content, "html.parser")
+    container = soup.find(id="primary") or soup
     versions = []
-    for span in soup.find_all("span", {"class": "infoSlide-value"}):
-        text = span.get_text(strip=True)
-        if text and "beta" not in text.lower() and "alpha" not in text.lower() and text not in versions:
-            versions.append(text)
+    for a in container.find_all("a", {"class": "fontBlack"}):
+        text = a.get_text(strip=True)
+        if "wear os" in text.lower() or "android tv" in text.lower():
+            continue
+        m = re.search(r'(\d+(\.\d+)+[a-zA-Z0-9_\-]*)', text)
+        if m:
+            v = m.group(1).strip()
+            if v and "beta" not in v.lower() and "alpha" not in v.lower() and v not in versions:
+                versions.append(v)
     if not versions:
-        for a in soup.find_all("a", {"class": "fontBlack"}):
-            text = a.get_text(strip=True)
-            m = re.search(r'(\d+[\.\d\+a-zA-Z\-_]+)$', text)
-            if m:
-                v = m.group(1).strip()
-                if v and "beta" not in v.lower() and "alpha" not in v.lower() and v not in versions:
-                    versions.append(v)
+        for span in container.find_all("span", {"class": "infoSlide-value"}):
+            text = span.get_text(strip=True)
+            if re.match(r'^\d+(\.\d+)+([a-zA-Z0-9_\-]+)?$', text):
+                if "beta" not in text.lower() and "alpha" not in text.lower() and text not in versions:
+                    versions.append(text)
     return versions
 
 def is_version_match(href: str, v_slug: str, v_compact: str) -> bool:
@@ -107,13 +111,13 @@ def page_has_variants(html_text: str) -> bool:
     if not html_text:
         return False
     soup = BeautifulSoup(html_text, "html.parser")
-    if soup.find("div", {"class": ["table", "variants-table"]}):
-        return True
-    if soup.find("div", {"class": re.compile(r"table-row")}):
-        return True
     if soup.find("a", href=re.compile(r"-apk-download/?$")):
         return True
-    if soup.find("a", {"class": re.compile(r"downloadButton")}):
+    table = soup.find("div", {"class": ["variants-table", "table"]})
+    if table and table.find("a", href=re.compile(r"-apk-download/?$")):
+        return True
+    dl_btn = soup.find("a", {"class": re.compile(r"downloadButton")})
+    if dl_btn and dl_btn.get("href") and not dl_btn["href"].startswith("#"):
         return True
     return False
 
@@ -127,10 +131,15 @@ def find_version_page(scraper, base_url: str, version: str):
     v_trim_slug = sanitize_version(v_trim) if v_trim else None
     v_trim_compact = compact_version(v_trim) if v_trim else None
     
+    title_slug = None
     # 1. Base listing page (most reliable & avoids guessing)
     r = safe_get(scraper, base_url)
     if r and r.status_code == 200:
         soup = BeautifulSoup(r.content, "html.parser")
+        h1 = soup.find("h1", {"class": "marginZero"})
+        if h1:
+            title_slug = sanitize_version(h1.get_text(strip=True))
+
         matching_links = []
         for a in soup.find_all("a", href=True):
             href = a["href"]
@@ -147,9 +156,12 @@ def find_version_page(scraper, base_url: str, version: str):
                 return full_url, r2
 
     # 2. Try candidate URLs: PRIORITIZE -release candidates
-    candidates = [
-        f"{base_url.rstrip('/')}/{app_slug}-{v_slug}-release/",
-    ]
+    candidates = []
+    if title_slug:
+        candidates.append(f"{base_url.rstrip('/')}/{title_slug}-{v_slug}-release/")
+        if v_trim_slug:
+            candidates.append(f"{base_url.rstrip('/')}/{title_slug}-{v_trim_slug}-release/")
+    candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_slug}-release/")
     if v_trim_slug:
         candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}-release/")
     candidates.append(f"{base_url.rstrip('/')}/{v_slug}-release/")
@@ -157,6 +169,10 @@ def find_version_page(scraper, base_url: str, version: str):
         candidates.append(f"{base_url.rstrip('/')}/{v_trim_slug}-release/")
     
     # Non -release fallbacks
+    if title_slug:
+        candidates.append(f"{base_url.rstrip('/')}/{title_slug}-{v_slug}/")
+        if v_trim_slug:
+            candidates.append(f"{base_url.rstrip('/')}/{title_slug}-{v_trim_slug}/")
     candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_slug}/")
     if v_trim_slug:
         candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}/")
