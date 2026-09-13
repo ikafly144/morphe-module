@@ -1,5 +1,6 @@
 AdGuard: 4.13.2  
 Amazon-Music: 26.30.1  
+Duolingo: 6.95.4  
 Prime-Video: 3.0.452.1047  
 Twitch: 25.3.0  
 
