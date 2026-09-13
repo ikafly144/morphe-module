@@ -13,5 +13,5 @@ Patches: RookieEnough/De-Vanced/patches-1.4.0.mpp
 [Changelog](https://github.com/RookieEnough/De-Vanced/releases/tag/v1.4.0)  
 
 Skipped:  
-Patches: hoo-dles/morphe-patches/patches-1.44.0.mpp    
+Patches: hoo-dles/morphe-patches/patches-1.44.0.mpp  
 Patches: RookieEnough/De-Vanced/patches-1.4.0.mpp    
