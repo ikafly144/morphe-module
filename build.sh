@@ -103,11 +103,11 @@ for table_name in $(toml_get_table_names); do
 			abort "ERROR: build-mode '${app_args[build_mode]}' is not a valid option for '${table_name}': only 'both', 'apk' or 'module' is allowed"
 		fi
 	} || app_args[build_mode]=apk
-	app_args[include_stock]=$(toml_get "$t" include-stock) && {
+	{ app_args[include_stock]=$(toml_get "$t" include-stock) || app_args[include_stock]=$(toml_get "$config" include-stock); } && {
 		if ! isoneof "${app_args[include_stock]}" disable merged split; then
 			abort "ERROR: include-stock '${app_args[include_stock]}' is not a valid option for '${table_name}': only 'disable', 'merged' or 'split' is allowed"
 		fi
-	} || app_args[include_stock]=merged
+	} || app_args[include_stock]=split
 
 	for dl_from in "${DL_SRCS[@]}"; do
 		if app_args[${dl_from}_dlurl]=$(toml_get "$t" "${dl_from}-dlurl"); then

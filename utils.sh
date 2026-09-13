@@ -940,20 +940,21 @@ build_rv() {
 			if [ "${args[include_stock]}" = "merged" ]; then
 				cp -f "$stock_apk" "${base_template}/stock/base.apk"
 			elif [ "${args[include_stock]}" = "split" ]; then
-				if [ ! -f "${stock_apk}.apkm" ]; then
-					epr "Cannot include as 'split' because stock apk of $table_name is not a bundle"
-					return 0
-				fi
-				if [ "$arch" = "arm64-v8a" ]; then
-					unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
-				elif [ "$arch" = "arm-v7a" ]; then
-					unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*arm64_v8a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
-				elif [ "$arch" = "x86" ]; then
-					unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*arm64_v8a.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
-				elif [ "$arch" = "x86_64" ]; then
-					unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86.apk' -x '*arm64_v8a.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+				if [ -f "${stock_apk}.apkm" ]; then
+					if [ "$arch" = "arm64-v8a" ]; then
+						unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					elif [ "$arch" = "arm-v7a" ]; then
+						unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*arm64_v8a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					elif [ "$arch" = "x86" ]; then
+						unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*arm64_v8a.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					elif [ "$arch" = "x86_64" ]; then
+						unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86.apk' -x '*arm64_v8a.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					else
+						unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					fi
 				else
-					unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+					pr "Stock apk of $table_name is not a bundle, copying as base.apk"
+					cp -f "$stock_apk" "${base_template}/stock/base.apk"
 				fi
 			fi
 		fi

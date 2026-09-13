@@ -74,7 +74,8 @@ install() {
 
 		for apki in "$MODPATH/stock"/*.apk; do
 			set_perm "${apki}" 1000 1000 644 u:object_r:apk_data_file:s0
-			if ! op=$(pmex install-write -S "$SZ" "$SES" "$(basename "${apki}")" "${apki}"); then
+			apk_sz=$(stat -c "%s" "${apki}")
+			if ! op=$(pmex install-write -S "$apk_sz" "$SES" "$(basename "${apki}")" "${apki}"); then
 				ui_print "ERROR: install-write failed"
 				install_err="$op"
 				break
@@ -132,11 +133,10 @@ BASEPATHLIB=${BASEPATH}/lib/${ARCH}
 if [ $INS = true ] || [ -z "$(ls -A1 "$BASEPATHLIB")" ]; then
 	ui_print "* Extracting native libs"
 	if [ ! -d "$BASEPATHLIB" ]; then mkdir -p "$BASEPATHLIB"; else rm -f "$BASEPATHLIB"/* >/dev/null 2>&1 || :; fi
-	if op=$(unzip -o -j "$MODPATH/stock/base.apk" "lib/${ARCH_LIB}/*" -d "$BASEPATHLIB" 2>&1); then
-		set_perm_recursive "${BASEPATH}/lib" 1000 1000 755 755 u:object_r:apk_data_file:s0
-	else
-		echo >&2 "ERROR: extracting native libs failed: '$op'"
-	fi
+	for apki in "$MODPATH/stock"/*.apk "$MODPATH/base.apk"; do
+		[ -f "$apki" ] && unzip -o -j "$apki" "lib/${ARCH_LIB}/*" -d "$BASEPATHLIB" >/dev/null 2>&1 || :
+	done
+	set_perm_recursive "${BASEPATH}/lib" 1000 1000 755 755 u:object_r:apk_data_file:s0
 fi
 
 set_perm "$MODPATH/base.apk" 1000 1000 644 u:object_r:apk_data_file:s0
