@@ -103,6 +103,20 @@ def is_version_match(href: str, v_slug: str, v_compact: str) -> bool:
         return True
     return False
 
+def page_has_variants(html_text: str) -> bool:
+    if not html_text:
+        return False
+    soup = BeautifulSoup(html_text, "html.parser")
+    if soup.find("div", {"class": ["table", "variants-table"]}):
+        return True
+    if soup.find("div", {"class": re.compile(r"table-row")}):
+        return True
+    if soup.find("a", href=re.compile(r"-apk-download/?$")):
+        return True
+    if soup.find("a", {"class": re.compile(r"downloadButton")}):
+        return True
+    return False
+
 def find_version_page(scraper, base_url: str, version: str):
     app_slug = base_url.rstrip('/').split('/')[-1]
     v_slug = sanitize_version(version)
@@ -129,31 +143,35 @@ def find_version_page(scraper, base_url: str, version: str):
         for href in matching_links[:5]:
             full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
             r2 = safe_get(scraper, full_url, referer=base_url)
-            if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+            if r2 and r2.status_code == 200 and page_has_variants(r2.text):
                 return full_url, r2
 
-    # 2. Try candidate URLs
+    # 2. Try candidate URLs: PRIORITIZE -release candidates
     candidates = [
         f"{base_url.rstrip('/')}/{app_slug}-{v_slug}-release/",
-        f"{base_url.rstrip('/')}/{app_slug}-{v_slug}/",
-        f"{base_url.rstrip('/')}/{v_slug}-release/",
-        f"{base_url.rstrip('/')}/{v_slug}/",
     ]
     if v_trim_slug:
-        candidates.extend([
-            f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}-release/",
-            f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}/",
-            f"{base_url.rstrip('/')}/{v_trim_slug}-release/",
-            f"{base_url.rstrip('/')}/{v_trim_slug}/",
-        ])
+        candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}-release/")
+    candidates.append(f"{base_url.rstrip('/')}/{v_slug}-release/")
+    if v_trim_slug:
+        candidates.append(f"{base_url.rstrip('/')}/{v_trim_slug}-release/")
+    
+    # Non -release fallbacks
+    candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_slug}/")
+    if v_trim_slug:
+        candidates.append(f"{base_url.rstrip('/')}/{app_slug}-{v_trim_slug}/")
+    candidates.append(f"{base_url.rstrip('/')}/{v_slug}/")
+    if v_trim_slug:
+        candidates.append(f"{base_url.rstrip('/')}/{v_trim_slug}/")
+
     for url in candidates:
         r2 = safe_get(scraper, url, referer=base_url)
-        if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+        if r2 and r2.status_code == 200 and page_has_variants(r2.text):
             return url, r2
 
     # 3. Search APKMirror fallback
-    search_terms = f"{app_slug.replace('-', ' ')} {version}"
-    search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={urllib.parse.quote(search_terms)}"
+    search_q = f"{app_slug.replace('-', ' ')} {v_trim if v_trim else version}"
+    search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={urllib.parse.quote(search_q)}"
     print(f"Searching APKMirror: {search_url}", file=sys.stderr)
     r_search = safe_get(scraper, search_url, referer=base_url)
     if r_search and r_search.status_code == 200:
@@ -167,7 +185,7 @@ def find_version_page(scraper, base_url: str, version: str):
         for href in matching_search[:3]:
             full_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
             r2 = safe_get(scraper, full_url, referer=search_url)
-            if r2 and r2.status_code == 200 and ("table" in r2.text or "downloadButton" in r2.text or "variant" in r2.text.lower()):
+            if r2 and r2.status_code == 200 and page_has_variants(r2.text):
                 return full_url, r2
 
     raise Exception(f"Could not find APKMirror page for version '{version}' at {base_url}")
@@ -194,17 +212,22 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
     print(f"Found version page: {version_url}", file=sys.stderr)
     
     soup = BeautifulSoup(resp.content, "html.parser")
-    table = soup.find("div", {"class": ["table", "variants-table"]})
     raw_variants = []
     
+    table = soup.find("div", {"class": ["table", "variants-table"]})
+    if not table:
+        table = soup.find("div", {"class": re.compile(r"variants-table")})
+    
     if table:
-        rows = table.find_all("div", recursive=False)[1:]
+        rows = table.find_all("div", {"class": re.compile(r"table-row")})
+        if not rows:
+            rows = table.find_all("div", recursive=False)[1:]
         for row in rows:
             cells = row.find_all("div", {"class": "table-cell"}, recursive=False)
             if not cells:
                 continue
             
-            link_el = row.find("a", {"class": "accent_color"})
+            link_el = row.find("a", href=re.compile(r"-apk-download/?$")) or row.find("a", {"class": "accent_color"})
             if not link_el or not link_el.get("href"):
                 continue
             
@@ -212,12 +235,16 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
             if href.startswith("#") or "all_versions" in href or "variant-" in href:
                 continue
             
-            badge = row.find("span", {"class": "apkm-badge"})
-            is_bundle = bool(badge and badge.text.strip().upper() == "BUNDLE")
+            badge = row.find("span", {"class": re.compile(r"apkm-badge")})
+            badge_text = badge.text.strip().upper() if badge else ""
+            is_bundle = ("BUNDLE" in badge_text) or ("bundle" in href.lower())
             
             variant_arch = "universal"
-            if len(cells) > 1:
-                variant_arch = cells[1].get_text(strip=True).lower()
+            for c in cells:
+                c_text = c.get_text(strip=True).lower()
+                if any(a in c_text for a in ("arm64-v8a", "armeabi-v7a", "arm", "x86_64", "x86", "universal", "noarch")):
+                    variant_arch = c_text
+                    break
             
             variant_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
             raw_variants.append({
@@ -225,6 +252,18 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
                 "url": variant_url,
                 "arch": variant_arch
             })
+    
+    # Fallback: check all -apk-download links directly on page
+    if not raw_variants:
+        for a in soup.find_all("a", href=re.compile(r"-apk-download/?$")):
+            href = a["href"].strip()
+            if href and not href.startswith("#") and "variant-" not in href:
+                variant_url = "https://www.apkmirror.com" + href if href.startswith("/") else href
+                raw_variants.append({
+                    "is_bundle": "bundle" in href.lower(),
+                    "url": variant_url,
+                    "arch": "universal"
+                })
     
     # If no variants in table, check if page itself has downloadButton
     if not raw_variants:
@@ -242,19 +281,23 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
     if not raw_variants:
         raise Exception(f"No variants found for {version}")
     
-    # Sort variants by priority: bundle first, requested arch first
+    # Sort variants by priority
     target_arch = arch.lower() if arch else "all"
+    v_parts = version.split('.')
+    sub_ver = v_parts[-1] if len(v_parts) > 3 else ""
     
     def variant_score(v):
         score = 0
         if v["is_bundle"]:
-            score += 100
+            score += 10
         if target_arch in ("all", "both"):
             score += 10
         elif target_arch in v["arch"]:
-            score += 20
-        elif "universal" in v["arch"]:
-            score += 10
+            score += 50
+        elif "universal" in v["arch"] or "noarch" in v["arch"]:
+            score += 25
+        if sub_ver and sub_ver in v["url"]:
+            score += 100
         return score
 
     ordered_variants = sorted(raw_variants, key=variant_score, reverse=True)
@@ -286,6 +329,8 @@ def download_apkmirror(base_url: str, version: str, output: str, arch: str = "al
             direct_link = soup_dl.find("a", href=re.compile(r"download\.php"))
             if not direct_link:
                 direct_link = soup_dl.find("a", {"rel": "nofollow", "href": re.compile(r"download\.php|/wp-content/")})
+            if not direct_link:
+                direct_link = soup_dl.find("a", string=re.compile(r"here", re.I))
             if not direct_link:
                 direct_link = soup_dl.find("a", {"rel": "nofollow"})
             if not direct_link or not direct_link.get("href"):
