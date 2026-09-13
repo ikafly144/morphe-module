@@ -757,13 +757,28 @@ build_rv() {
 		p_patcher_args+=("-f")
 	fi
 	if [ $get_latest_ver = "true" ]; then
-		if ! isoneof "$dl_from" "${tried_dl[@]}"; then
-			if ! get_"${dl_from}"_resp "${args[${dl_from}_dlurl]}"; then
-				abort "ERROR: Could not get '${table}' from '${dl_from}'"
+		local got_vers=false
+		for dl_p in "${DL_SRCS[@]}"; do
+			if [ -z "${args[${dl_p}_dlurl]}" ]; then continue; fi
+			if get_"${dl_p}"_resp "${args[${dl_p}_dlurl]}"; then
+				if pkgvers=$(get_"${dl_p}"_vers); then
+					if [ -n "$pkgvers" ]; then
+						version=$(get_highest_ver <<<"$pkgvers") || version=$(head -1 <<<"$pkgvers")
+						if [ -n "$version" ]; then
+							dl_from=$dl_p
+							got_vers=true
+							break
+						fi
+					fi
+				fi
 			fi
+		done
+		if [ "$got_vers" = false ]; then
+			abort "ERROR: Could not get versions for ${table}"
 		fi
-		pkgvers=$(get_"${dl_from}"_vers)
-		version=$(get_highest_ver <<<"$pkgvers") || version=$(head -1 <<<"$pkgvers")
+		pr "Choosing latest version '$version' for ${table}"
+	else
+		pr "Choosing version '$version' for ${table}"
 	fi
 	if [ -z "$version" ]; then
 		epr "empty version, not building ${table}."
