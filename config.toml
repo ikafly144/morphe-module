@@ -33,6 +33,7 @@ module-prop-name = "prime-video-morphe"
 include-stock = "split"
 
 [Twitch]
+enabled = false
 app-name = "Twitch"
 pkg-name = "tv.twitch.android.app"
 patches-source = "RookieEnough/De-Vanced"
@@ -45,6 +46,7 @@ module-prop-name = "twitch-morphe"
 include-stock = "split"
 
 [Amazon-Music]
+enabled = false
 app-name = "Amazon-Music"
 pkg-name = "com.amazon.mp3"
 patches-source = "RookieEnough/De-Vanced"
