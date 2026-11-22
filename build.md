@@ -1,12 +1,13 @@
-Amazon-Music: 26.36.1  
-Twitch: 25.3.0  
+AdGuard: 4.16.0  
 
-Built with [morphe-patches](https://github.com/hoo-dles/morphe-patches) & [morphe-cli](https://github.com/MorpheApp/morphe-cli)
+Built with [morphe-desktop](https://github.com/MorpheApp/morphe-desktop) & community Morphe patch sources
   
-Patches: RookieEnough/De-Vanced/patches-1.6.2.mpp  
-[Changelog](https://github.com/RookieEnough/De-Vanced/releases/tag/v1.6.2)
+Patches: ginDoki19/GinArena-patch/patches-2.13.0.mpp  
+[Changelog](https://github.com/ginDoki19/GinArena-patch/releases/tag/v2.13.0)
 
-CLI: MorpheApp/morphe-cli/morphe-desktop-1.19.1-all.jar    
+CLI: MorpheApp/morphe-desktop/morphe-desktop-2.3.0-all.jar  
+Patches: hxreborn/morphe-patches/patches-1.85.0.mpp  
+[Changelog](https://github.com/hxreborn/morphe-patches/releases/tag/v1.85.0)
 
-Skipped:  
-Patches: hoo-dles/morphe-patches/patches-1.47.0.mpp        
+Patches: semicoloncolonel/mobile-morphe-patches/patches-1.1.1.mpp  
+[Changelog](https://github.com/semicoloncolonel/mobile-morphe-patches/releases/tag/v1.1.1)  
