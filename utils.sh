@@ -442,7 +442,7 @@ dl_apkmirror() {
 	if [ -f "download_apkmirror.py" ]; then
 		local pycmd="python3"
 		if ! command -v python3 >/dev/null 2>&1; then pycmd="python"; fi
-		if $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
+		if $pycmd -c "import bs4; import curl_cffi" 2>/dev/null || $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
 			pr "Using Python APKMirror downloader"
 			if $pycmd download_apkmirror.py "$url" "$version" "$output" "$arch" "$dpi"; then
 				if [ -f "${output}.apkm" ]; then
@@ -496,7 +496,7 @@ get_apkmirror_vers() {
 	if [ -f "download_apkmirror.py" ]; then
 		local pycmd="python3"
 		if ! command -v python3 >/dev/null 2>&1; then pycmd="python"; fi
-		if $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
+		if $pycmd -c "import bs4; import curl_cffi" 2>/dev/null || $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
 			$pycmd download_apkmirror.py --versions "${__APKMIRROR_URL__}" && return
 		fi
 	fi
@@ -527,7 +527,7 @@ get_apkmirror_resp() {
 	if [ -f "download_apkmirror.py" ]; then
 		local pycmd="python3"
 		if ! command -v python3 >/dev/null 2>&1; then pycmd="python"; fi
-		if $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
+		if $pycmd -c "import bs4; import curl_cffi" 2>/dev/null || $pycmd -c "import cloudscraper, bs4" 2>/dev/null; then
 			if pkg=$($pycmd download_apkmirror.py --pkg-name "$1" 2>/dev/null); then
 				if [ -n "$pkg" ]; then
 					__APKMIRROR_PKG_NAME__="$pkg"
