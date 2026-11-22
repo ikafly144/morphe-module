@@ -185,6 +185,7 @@ config_update() {
 	: >"$TEMP_DIR"/skipped
 	local upped=()
 	local prcfg=false
+	local has_error=false
 	for table_name in $(toml_get_table_names); do
 		if [ -z "$table_name" ]; then continue; fi
 		t=$(toml_get_table "$table_name")
@@ -198,11 +199,23 @@ config_update() {
 			sources["$PATCHES_SRC/$PATCHES_VER"]=0
 			local rv_rel="https://api.github.com/repos/${PATCHES_SRC}/releases"
 			if [ "$PATCHES_VER" = "dev" ]; then
-				last_patches=$(gh_req "$rv_rel" - | jq -e -r '.[0]') || continue
+				if ! last_patches=$(gh_req "$rv_rel" - | jq -e -r '.[0]'); then
+					epr "config_update error: failed to fetch dev release for '${PATCHES_SRC}'"
+					has_error=true
+					continue
+				fi
 			elif [ "$PATCHES_VER" = "latest" ]; then
-				last_patches=$(gh_req "$rv_rel/latest" -) || continue
+				if ! last_patches=$(gh_req "$rv_rel/latest" -); then
+					epr "config_update error: failed to fetch latest release for '${PATCHES_SRC}'"
+					has_error=true
+					continue
+				fi
 			else
-				last_patches=$(gh_req "$rv_rel/tags/${PATCHES_VER}" -) || continue
+				if ! last_patches=$(gh_req "$rv_rel/tags/${PATCHES_VER}" -); then
+					epr "config_update error: failed to fetch release '${PATCHES_VER}' for '${PATCHES_SRC}'"
+					has_error=true
+					continue
+				fi
 			fi
 			tag_name=$(jq -e -r '.tag_name' <<<"$last_patches") || abort "config_update error: No tag name"
 			if ! last_patches=$(jq -e -r '.assets[] | select(.name | (endswith("asc") or endswith("json")) | not) | .name' <<<"$last_patches"); then
@@ -229,6 +242,9 @@ config_update() {
 			query+=".key == \"$table\""
 		done
 		jq "to_entries | map(select(${query} or (.value | type != \"object\"))) | from_entries" <<<"$__TOML__"
+	fi
+	if [ "$has_error" = true ]; then
+		return 1
 	fi
 }
 
@@ -642,8 +658,11 @@ dl_github() {
 	local repo="${url#https://github.com/}"
 	repo="${repo%/}"
 	local tag="v${version#v}"
+	local ver_short="${version%.0}"
+	local tag_short="v${ver_short#v}"
 	local rel
-	rel=$(jq -e -r --arg tag "$tag" --arg ver "$version" '.[] | select(.tag_name == $tag or .tag_name == $ver or .tag_name == ("v" + $ver))' <<<"$__GITHUB_RESP__") || return 1
+	rel=$(jq -e -r --arg tag "$tag" --arg ver "$version" --arg tag_short "$tag_short" --arg ver_short "$ver_short" \
+		'(.[] | select(.tag_name == $tag or .tag_name == $ver or .tag_name == ("v" + $ver))) // (.[] | select(.tag_name == $tag_short or .tag_name == $ver_short))' <<<"$__GITHUB_RESP__" | jq -s -e '.[0]') || return 1
 	local dlurl
 	dlurl=$(jq -e -r '.assets[] | select(.name | endswith(".apk") and (contains("TV") | not)) | .browser_download_url' <<<"$rel" | head -1) || return 1
 	gh_dl "$output" "$dlurl"

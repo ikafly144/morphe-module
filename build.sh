@@ -163,7 +163,7 @@ wait
 _clean_tmp
 if [ -z "$(ls -A1 "${BUILD_DIR}")" ]; then abort "All builds failed."; fi
 
-log "\nBuilt with [morphe-patches](https://github.com/hoo-dles/morphe-patches) & [morphe-cli](https://github.com/MorpheApp/morphe-cli)\n"
+log "\nBuilt with [morphe-desktop](https://github.com/MorpheApp/morphe-desktop) & community Morphe patch sources\n"
 log "$(cat "$TEMP_DIR"/*/changelog.md)"
 
 SKIPPED=$(cat "$TEMP_DIR"/skipped 2>/dev/null || :)
