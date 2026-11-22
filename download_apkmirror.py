@@ -9,24 +9,39 @@ import re
 import time
 import argparse
 import urllib.parse
-import cloudscraper
+try:
+    from curl_cffi import requests as _cffi_requests
+except ImportError:
+    _cffi_requests = None
+try:
+    import cloudscraper
+except ImportError:
+    cloudscraper = None
 from bs4 import BeautifulSoup
 
 def get_scraper():
-    scraper = cloudscraper.create_scraper()
-    scraper.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
-    return scraper
+    if _cffi_requests is not None:
+        scraper = _cffi_requests.Session(impersonate="chrome")
+        scraper.headers.update({
+            "Accept-Language": "en-US,en;q=0.9",
+        })
+        return scraper
+    if cloudscraper is not None:
+        scraper = cloudscraper.create_scraper()
+        scraper.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        })
+        return scraper
+    raise RuntimeError("Neither curl_cffi nor cloudscraper is installed")
 
-def safe_get(scraper, url: str, referer: str = None, max_retries: int = 3):
+def safe_get(scraper, url: str, referer: str = None, max_retries: int = 4):
     headers = {}
     if referer:
         headers["Referer"] = referer
     for attempt in range(max_retries):
         try:
-            r = scraper.get(url, headers=headers)
+            r = scraper.get(url, headers=headers, timeout=20)
             if r.status_code == 200:
                 return r
             elif r.status_code in (429, 503, 504):
@@ -206,20 +221,35 @@ def find_version_page(scraper, base_url: str, version: str):
 
     raise Exception(f"Could not find APKMirror page for version '{version}' at {base_url}")
 
-def download_file(scraper, direct_url: str, referer: str, out_path: str):
+def download_file(scraper, direct_url: str, referer: str, out_path: str, max_retries: int = 3):
     dir_name = os.path.dirname(out_path)
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
     
     headers = {"Referer": referer}
     print(f"Downloading from {direct_url} -> {out_path}", file=sys.stderr)
-    with scraper.get(direct_url, stream=True, headers=headers) as r:
-        r.raise_for_status()
-        with open(out_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=65536):
-                if chunk:
-                    f.write(chunk)
-    print(f"Downloaded successfully: {out_path} ({os.path.getsize(out_path)} bytes)", file=sys.stderr)
+    last_err = None
+    for attempt in range(max_retries):
+        r = None
+        try:
+            r = scraper.get(direct_url, stream=True, headers=headers, timeout=60)
+            r.raise_for_status()
+            with open(out_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+            print(f"Downloaded successfully: {out_path} ({os.path.getsize(out_path)} bytes)", file=sys.stderr)
+            return
+        except Exception as e:
+            last_err = e
+            print(f"Download attempt {attempt+1}/{max_retries} failed: {e}", file=sys.stderr)
+            if os.path.exists(out_path):
+                os.remove(out_path)
+            time.sleep(2)
+        finally:
+            if r is not None and hasattr(r, "close"):
+                r.close()
+    raise last_err
 
 def download_apkmirror(base_url: str, version: str, output: str, arch: str = "all", dpi: str = ""):
     scraper = get_scraper()
